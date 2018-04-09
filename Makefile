@@ -25,9 +25,20 @@ APPNAME = subsonic
 PKGREL = ./
 ZIPREL = ./
 SOURCEREL = ..
-ZIP_EXCLUDE = \*.swp \*~ \*\.~ Makefile README.rst \*.git/\* \*.odp \*.zip \*.pkg
-ROKU_DEV_TARGET = roku
-BUILDDATE = `date +%y%m%d`
+ZIP_EXCLUDE = \*.swp \*~ \*\.~ Makefile README.rst \*.git/\* \*.odp \*.zip \*.pkg tags .gitignore .buildpath .project **/.DS_Store
+BUILDDATE = $(shell date +%y%m%d)
+HTTPSTATUS = $(shell curl --silent --write-out "\n%{http_code}\n" $(ROKU_DEV_TARGET))
+
+ifndef ROKU_DEV_TARGET
+	ROKU_DEV_TARGET = roku
+endif
+
+ifdef DEVPASSWORD
+    USERPASS = rokudev:$(DEVPASSWORD)
+else
+    USERPASS = rokudev
+endif
+
 .PHONY: all $(APPNAME)
 
 $(APPNAME): 
@@ -61,10 +72,21 @@ $(APPNAME):
 
 install: $(APPNAME)
 	@echo "Installing $(APPNAME) to host $(ROKU_DEV_TARGET)"
-	@curl -s -S -F "mysubmit=Install" -F "archive=@$(ZIPREL)/$(APPNAME).zip" -F "passwd=" http://$(ROKU_DEV_TARGET)/plugin_install | grep "<font color" | sed "s/<font color=\"red\">//"
+	@if [ "$(HTTPSTATUS)" == " 401" ]; \
+	then \
+		curl --user $(USERPASS) --digest -s -S -F "mysubmit=Install" -F "archive=@$(ZIPREL)/$(APPNAME).zip" -F "passwd=" http://$(ROKU_DEV_TARGET)/plugin_install | grep "<font color" | sed "s/<font color=\"red\">//" | sed "s[</font>[[" ; \
+	else \
+		curl -s -S -F "mysubmit=Install" -F "archive=@$(ZIPREL)/$(APPNAME).zip" -F "passwd=" http://$(ROKU_DEV_TARGET)/plugin_install | grep "<font color" | sed "s/<font color=\"red\">//" | sed "s[</font>[[" ; \
+	fi
+
+old_install: $(APPNAME)
+	@echo "Installing $(APPNAME) to host $(ROKU_DEV_TARGET)"
+	#@curl -s -S -F "mysubmit=Install" -F "archive=@$(ZIPREL)/$(APPNAME).zip" -F "passwd=" http://$(ROKU_DEV_TARGET)/plugin_install | grep "<font color" | sed "s/<font color=\"red\">//"
+	curl -S -F "mysubmit=Install" -F "archive=@$(ZIPREL)/$(APPNAME).zip" -F "passwd=" http://$(ROKU_DEV_TARGET)/plugin_install
 
 update_manifest:
 	@echo "  >> updating build_version"
+	$(shell sed -i s/^build_version=.*/build_version=$(BUILDDATE)/ manifest)
 	sed -i s/^build_version=.*/build_version=$(BUILDDATE)/ manifest
 
 pkg: update_manifest install

@@ -1025,6 +1025,52 @@ end function
 REM ***************************************************************
 REM
 REM ***************************************************************
+function PlayTopSongs(artist) as Void
+    ' Create a facade to hide whatever screen came before because there is a noticable
+    ' period between dialog.Close() and the spring board render...
+    facade = CreateObject("roPosterScreen")
+    facade.Show()
+    facade.ShowMessage("")
+
+    dialog = CreateObject("roOneLineDialog")
+    dialog.SetTitle("Retrieving...")
+    dialog.ShowBusyAnimation()
+    dialog.Show()
+    songs = GetTopSongs(artist.Title)
+    dialog.Close() ' you must explictly close this screen otherwise it will block the back button
+
+    if songs.Count() = 0 then
+        port = CreateObject("roMessagePort")
+        dialog = CreateObject("roMessageDialog")
+        dialog.SetMessagePort(port)
+        dialog.SetTitle("Top Songs")
+        dialog.SetText("The server didn't return any top songs")
+
+        dialog.AddButton(1, "OK")
+        dialog.EnableBackButton(true)
+        dialog.Show()
+        While True
+            dlgMsg = wait(0, dialog.GetMessagePort())
+            If type(dlgMsg) = "roMessageDialogEvent"
+                if dlgMsg.isButtonPressed()
+                    if dlgMsg.GetIndex() = 1
+                        dialog.Close()
+                        exit while
+                    end if
+                else if dlgMsg.isScreenClosed()
+                    exit while
+                end if
+            end if
+        end while
+    else
+        ShowSpringBoard(songs, 0, {playQueueStyle: "flat-episodic"})
+        facade.Close()
+    end if
+end function
+
+REM ***************************************************************
+REM
+REM ***************************************************************
 function GetAlbumSongs(album as Object)
     xfer = CreateObject("roURLTransfer")
     xfer.SetURL(createSubsonicUrl("getMusicDirectory.view", {id: album.Id}))
@@ -1142,6 +1188,28 @@ end function
 REM ***************************************************************
 REM
 REM ***************************************************************
+function GetTopSongs(artistTitle as String, count=50 as Integer) as Object
+    xfer = CreateObject("roURLTransfer")
+    xfer.SetURL(createSubsonicUrl("getTopSongs.view", {artist: artistTitle, count: Stri(count).Trim()}))
+    xferResult = xfer.GetToString()
+
+    xml = CreateObject("roXMLElement")
+    items = []
+    if xml.Parse(xferResult)
+        for each song in xml.topSongs.song
+            item = CreateSongItemFromXml(song, 158, 237)
+            if item <> invalid then
+                items.push(item)
+            end if
+        next
+    end if
+
+    return items
+end function
+
+REM ***************************************************************
+REM
+REM ***************************************************************
 function ShowIndex()
     Names = CreateObject("roArray", 0, true)
     Indexes = CreateObject("roAssociativeArray")
@@ -1208,6 +1276,7 @@ REM ***************************************************************
 function ShowArtist(artist as Object)
     albumList = CreateObject("roArray", 0, true)
 
+    print "Showing " + artist.Title + ":" + artist.Id
     xfer = CreateObject("roURLTransfer")
     xfer.SetURL(artist.Url)
     xferResult = xfer.GetToString()
@@ -1231,6 +1300,15 @@ function ShowArtist(artist as Object)
     item.HDPosterUrl = "pkg:/images/posters/shuffle.png"
     albumList.push(item)
     
+    ' Create a top songs item
+    item = CreateObject("roAssociativeArray")
+    item.Id = "topsongs"
+    item.Type = "Button"
+    item.ShortDescriptionLine1 = "Play Top Songs"
+    item.SDPosterUrl = "pkg:/images/posters/podcast.png"
+    item.HDPosterUrl = "pkg:/images/posters/podcast.png"
+    albumList.push(item)
+
     if xml.Parse(xferResult)
        for each child in xml.directory.child
            if child@isDir = "false" then
@@ -1271,6 +1349,8 @@ function ShowArtist(artist as Object)
                     PlayAll(albumList, false)
                 else if item.Id = "shuffleall" then
                     PlayAll(albumList, true)
+                else if item.Id = "topsongs" then
+                    PlayTopSongs(artist)
                 end if
             else if msg.isScreenClosed() then 
                 exit while
@@ -1868,7 +1948,7 @@ REM ***************************************************************
 REM
 REM ***************************************************************
 function getMinimumApiVersion() as String
-  return "1.4.0"
+  return "1.13.0"
 End function
 
 REM ***************************************************************
