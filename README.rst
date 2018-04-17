@@ -1,3 +1,8 @@
+  NOTICE: This app is woefully out of date with the Roku SDK.  It currently works
+  fine, but will stop working on 2019-01-01 due to deprecated objects being removed
+  from the SDK.  I'm going to try to modernize the app before that happens.  Keep a watch
+  on the ``v2`` branch for changes.  -thecarlhall
+
 Introduction
 ------------
 This software is a ROKU front-end to the Subsonic media streaming server.  It
@@ -15,6 +20,10 @@ Install this channel: https://owner.roku.com/add/SUBSONIC
 
 Release Notes
 ~~~~~~~~~~~~~
+
+1.11.0 (unreleased)
+'''''''''''''''''''
+ * Add "Play Top Songs" for Artist Screen
 
 1.10.0 - 14th Mar 2015
 '''''''''''''''''''''
