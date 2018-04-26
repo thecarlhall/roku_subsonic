@@ -24,6 +24,7 @@ Release Notes
 1.11.0 (unreleased)
 '''''''''''''''''''
  * Add "Play Top Songs" for Artist Screen
+ * Add "Play Radio" for Artist Screen
 
 1.10.0 - 14th Mar 2015
 '''''''''''''''''''''

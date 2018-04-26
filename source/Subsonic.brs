@@ -1025,7 +1025,7 @@ end function
 REM ***************************************************************
 REM
 REM ***************************************************************
-function PlayTopSongs(artist) as Void
+sub PlayRelated(artist as Object, relType as Integer) as Void
     ' Create a facade to hide whatever screen came before because there is a noticable
     ' period between dialog.Close() and the spring board render...
     facade = CreateObject("roPosterScreen")
@@ -1036,15 +1036,21 @@ function PlayTopSongs(artist) as Void
     dialog.SetTitle("Retrieving...")
     dialog.ShowBusyAnimation()
     dialog.Show()
-    songs = GetTopSongs(artist.Title)
+
+    if relType = 0 then
+        songs = GetTopSongs(artist.Title)
+    elseif relType = 1 then
+        songs = GetRadio(artist.Id)
+    endif
+
     dialog.Close() ' you must explictly close this screen otherwise it will block the back button
 
     if songs.Count() = 0 then
         port = CreateObject("roMessagePort")
         dialog = CreateObject("roMessageDialog")
         dialog.SetMessagePort(port)
-        dialog.SetTitle("Top Songs")
-        dialog.SetText("The server didn't return any top songs")
+        dialog.SetTitle("")
+        dialog.SetText("The server didn't return any songs")
 
         dialog.AddButton(1, "OK")
         dialog.EnableBackButton(true)
@@ -1066,7 +1072,7 @@ function PlayTopSongs(artist) as Void
         ShowSpringBoard(songs, 0, {playQueueStyle: "flat-episodic"})
         facade.Close()
     end if
-end function
+end sub
 
 REM ***************************************************************
 REM
@@ -1207,6 +1213,25 @@ function GetTopSongs(artistTitle as String, count=50 as Integer) as Object
     return items
 end function
 
+function GetRadio(artistId as String, count=50 as Integer) as Object
+    xfer = CreateObject("roURLTransfer")
+    xfer.SetURL(createSubsonicUrl("getSimilarSongs.view", {id: artistId, count: Stri(count).Trim()}))
+    xferResult = xfer.GetToString()
+
+    xml = CreateObject("roXMLElement")
+    items = []
+    if xml.Parse(xferResult)
+        for each song in xml.similarSongs.song
+            item = CreateSongItemFromXml(song, 158, 237)
+            if item <> invalid then
+                items.push(item)
+            end if
+        next
+    end if
+
+    return items
+end function
+
 REM ***************************************************************
 REM
 REM ***************************************************************
@@ -1309,6 +1334,15 @@ function ShowArtist(artist as Object)
     item.HDPosterUrl = "pkg:/images/posters/podcast.png"
     albumList.push(item)
 
+    ' Create a radio item
+    item = CreateObject("roAssociativeArray")
+    item.Id = "radio"
+    item.Type = "Button"
+    item.ShortDescriptionLine1 = "Play Radio"
+    item.SDPosterUrl = "pkg:/images/posters/podcast.png"
+    item.HDPosterUrl = "pkg:/images/posters/podcast.png"
+    albumList.push(item)
+
     if xml.Parse(xferResult)
        for each child in xml.directory.child
            if child@isDir = "false" then
@@ -1350,7 +1384,9 @@ function ShowArtist(artist as Object)
                 else if item.Id = "shuffleall" then
                     PlayAll(albumList, true)
                 else if item.Id = "topsongs" then
-                    PlayTopSongs(artist)
+                    PlayRelated(artist, 0)
+                else if item.Id = "radio" then
+                    PlayRelated(artist, 1)
                 end if
             else if msg.isScreenClosed() then 
                 exit while
