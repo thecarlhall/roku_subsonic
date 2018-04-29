@@ -1196,7 +1196,11 @@ REM
 REM ***************************************************************
 function GetTopSongs(artistTitle as String, count=50 as Integer) as Object
     xfer = CreateObject("roURLTransfer")
-    xfer.SetURL(createSubsonicUrl("getTopSongs.view", {artist: artistTitle, count: Stri(count).Trim()}))
+    params = {
+        artist: xfer.Escape(artistTitle),
+        count: Stri(count).Trim()
+    }
+    xfer.SetURL(createSubsonicUrl("getTopSongs.view", params))
     xferResult = xfer.GetToString()
 
     xml = CreateObject("roXMLElement")
