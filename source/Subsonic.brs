@@ -1334,8 +1334,8 @@ function ShowArtist(artist as Object)
     item.Id = "topsongs"
     item.Type = "Button"
     item.ShortDescriptionLine1 = "Play Top Songs"
-    item.SDPosterUrl = "pkg:/images/posters/podcast.png"
-    item.HDPosterUrl = "pkg:/images/posters/podcast.png"
+    item.SDPosterUrl = "pkg:/images/posters/file.png"
+    item.HDPosterUrl = "pkg:/images/posters/file.png"
     albumList.push(item)
 
     ' Create a radio item
