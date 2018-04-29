@@ -1927,7 +1927,24 @@ REM ***************************************************************
 function createSubsonicUrl(view as String, params={} as Object) as String
     ' Always override certian values
     params.u = getUsername()
-    params.p = getPassword()
+
+    salt = ""
+    ' add randomness per call for a bit more security
+    for i = 1 to 5
+        salt = salt + Stri(Rnd(100)).Trim()
+    end for
+    params.s = salt
+
+    ba1 = CreateObject("roByteArray")
+    ba1.FromAsciiString(getPassword())
+    ba2 = CreateObject("roByteArray")
+    ba2.FromAsciiString(salt)
+    digest = CreateObject("roEVPDigest")
+    digest.Setup("md5")
+    digest.Update(ba1)
+    digest.Update(ba2)
+    params.t = digest.Final()
+
     if m.version = invalid
         params.v = getMinimumApiVersion()
     else
